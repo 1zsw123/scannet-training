@@ -1,0 +1,5 @@
+scene=scene0031_00  orig_num_frames=2756  i2slam_num_frames=300
+mapping: i2slam_frame[i] == orig_frame[i] for i in [0, 299]
+poses.npy shape (300, 4, 4) float32 camera_to_world (orig ScanNet convention)
+depth_shift = 1000.0 (depth values / shift = meters)
+color_size (np.int32(1296), np.int32(968)), depth_size (np.int32(640), np.int32(480))

@@ -1,0 +1,24 @@
+# Versions tested by the original authors. Constraints loose; C3G itself
+# pins more strictly.
+torch>=2.4
+torchvision
+pytorch-lightning>=2.0
+hydra-core>=1.3
+omegaconf>=2.3
+einops
+jaxtyping
+numpy
+pillow
+opencv-python
+tqdm
+wandb>=0.19
+dacite
+
+# Loss / metrics
+lpips
+
+# DA3 / ReSplat / VDiff requirements (typically already in any C3G install)
+# basicsr (specific VDiff fork)
+# gsplat            (CUDA-built; see SETUP.md §Environment)
+# diff-gaussian-rasterization
+# mmengine

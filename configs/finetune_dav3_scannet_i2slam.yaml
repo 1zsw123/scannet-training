@@ -1,0 +1,97 @@
+# @package _global_
+# Finetune DA3+ReSplat+DiffusionHead on I2-SLAM ScanNet (4 scenes).
+# Input: blurry color (gt/color_*.png).  Target: VDiff pseudo-GT (vdiff/color_*.png).
+# Depth supervision: ScanNet GT depth (depth_*.npy, 0=hole → masked by loss_depth automatically).
+# Init: latest GoPro ckpt (load_weights_only=true → fresh 0→20000).
+
+defaults:
+  - /dataset@_group_.scannet_i2slam: scannet_i2slam
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse_l1, lpips_v3, ssim, depth]
+
+wandb:
+  name: finetune_dav3_scannet_i2slam
+  tags: [scannet_i2slam, vdiff_pseudo_gt, diffusion_head, da3_resplat, finetune, pred_pose, depth_supervised]
+
+model:
+  encoder:
+    name: da3_resplat
+    da3_checkpoint: /gpfs/scratch1/shared/qzhang1/da3_pretrained/DA3-GIANT
+    resplat_checkpoint: /gpfs/scratch1/shared/qzhang1/resplat_pretrained/resplat-base-dl3dv-256x448-view8-1934a04c.pth
+    freeze_da3: true
+    freeze_resplat: true
+    # Pure GT path (use_pred_pose=false): DA3 forward with GT-w2c + GT-K.
+    # Downstream consumes context (still GT). No mixed-coord, no INJECT env.
+    use_pred_pose: false
+    gaussian_adapter:
+      sh_degree: 3
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: -1
+  refiner: null
+  diffusion_head:
+    enc_k: 256
+    enc_df: 128
+    enc_df_out: 128
+    enc_d_point: 64
+    enc_cross_depth: 4
+    enc_self_depth: 2
+    dec_dim_model: 64
+    dec_cross_depth: 3
+    dec_num_virtual: 256
+    train_num_steps: 3
+    infer_num_steps: 3
+    use_cam_cond: false
+    use_vggt_priors: true
+    use_cam_pred: false
+
+optimizer:
+  lr: 2e-5              # high lr — test if pure GT path is stable (no mixed coord)
+  warm_up_steps: 200
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_workers: 1
+    persistent_workers: false
+
+train:
+  context_view_loss: false
+  random_select_context_view: false
+  freeze_encoder: true
+  depth_mode: depth
+  share_weight: 0.0
+  l_flow_weight: 0.0
+  cam_loss_weight: 0.0
+
+trainer:
+  max_steps: 20000
+  val_check_interval: 500
+  accumulate_grad_batches: 4
+  gradient_clip_val: 1.0
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 0
+  precision: bf16-mixed
+  num_nodes: 1
+
+checkpointing:
+  # GoPro init (clean baseline for pure-GT path)
+  load: /scratch-shared/qzhang1/C3G_outputs/exp_gopro_planB_l2img_depth02_from_scannetpp20k/2026-05-05_21-35-23/checkpoints/latest-info/global_step_3999.ckpt
+  load_weights_only: true
+  every_n_train_steps: 2000          # was 500, reduced to lower disk pressure
+  save_top_k: 1
+  save_weights_only: true            # weights-only ckpt ~1.5 GB (vs 4.4 GB w/ optimizer)
+
+loss:
+  depth:
+    weight: 0.0           # disabled (per user) — depth loss spikes (20x batch-batch
+                          # variance from holes + scale-invariant normalisation)
+                          # were destabilising DiffHead, causing PSNR collapse
+                          # ~step 250-400. Set to 0 for stable training.

@@ -1,0 +1,6 @@
+# Sharp frames used in the RGBD-SLAM experiments on the ScanNet dataset
+
+'scannet/scene0024_01': [5, 10, 50, 80, 90, 95, 185],
+'scannet/scene0031_00': [10, 90, 160, 170, 185, 195],
+'scannet/scene0736_00': [70, 115, 195, 275, 295, 380, 385],
+'scannet/scene0785_00': [5, 10, 15, 35, 75, 80, 120, 360, 495],
