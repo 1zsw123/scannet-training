@@ -1,0 +1,31 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+  - optional view_sampler_dataset_specific_config@view_sampler: bounded_rsblur
+
+name: rsblur
+
+roots:
+  - /scratch-shared/qzhang1/datasets/RSBlur/RSBlur
+
+near: 0.1
+far: 100.0
+
+input_image_shape: [224, 448]   # lcm(14,8)=56: 224=4×56, 448=8×56 — DA3 patch14 + ReSplat stride8
+original_image_shape: [1199, 1917]
+cameras_are_circular: false
+
+baseline_min: 0.0
+baseline_max: 1.0e10
+max_fov: 180.0
+skip_bad_shape: false
+
+scene_list: []
+# holdout 4 scenes for val (≥ devices=4, avoids empty DDP rank); 14 for train
+val_scene_list: ["0016", "0017", "0018", "0019"]
+samples_per_scene: 200
+val_samples_per_scene: 50
+
+make_baseline_1: false
+augment: false
+relative_pose: false

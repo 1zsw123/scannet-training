@@ -1,0 +1,33 @@
+defaults:
+  - base_dataset
+  - view_sampler: sequential
+
+name: tum
+
+roots:
+  - /scratch-shared/qzhang1/datasets/TUM_RGBD
+
+near: 0.1
+far: 10.0
+
+# DAV3 inference. 480×640 matches TUM native (4:3) AND ScanNet++ DSLR training.
+input_image_shape: [480, 640]
+output_image_shape: [480, 640]
+original_image_shape: [480, 640]
+
+cameras_are_circular: false
+baseline_min: 1e-6
+baseline_max: 1e10
+max_fov: 120.0
+skip_bad_shape: false
+
+scene_list:
+  - rgbd_dataset_freiburg1_desk
+  - rgbd_dataset_freiburg2_xyz
+  - rgbd_dataset_freiburg3_long_office_household
+
+samples_per_scene: 1000   # cap; sequential view_sampler will stop at end of sequence
+
+make_baseline_1: false
+augment: false
+relative_pose: true

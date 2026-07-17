@@ -1,0 +1,35 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+  - optional view_sampler_dataset_specific_config@view_sampler: bounded_scannetpp_blur
+
+name: scannetpp_blur
+
+roots:
+  - /scratch-shared/qzhang1/scannetpp_processed
+
+near: 0.01
+far: 10.0
+
+input_image_shape: [224, 224]
+original_image_shape: [480, 640]
+background_color: [0.0, 0.0, 0.0]
+cameras_are_circular: false
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 120.0
+skip_bad_shape: false
+
+scene_list: []
+
+# false = 模糊帧→锐利帧 (deblur); true = 锐利帧→锐利帧 (baseline)
+sharp_context: false
+
+samples_per_scene: 100
+num_context_views: 6
+min_sharp_frames: 36
+
+make_baseline_1: false
+augment: false
+relative_pose: true

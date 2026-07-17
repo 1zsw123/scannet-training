@@ -1,0 +1,71 @@
+# Conda environment for the C3G DA3+ReSplat+DiffusionHead ScanNet i2slam fine-tune.
+# Matches the author's tested stack: Python 3.11 + torch 2.4.0 + CUDA 12.1.
+# Do NOT use Python 3.13 — it breaks several CUDA extensions / basicsr.
+#
+#   conda env create -f environment.yml
+#   conda activate c3g
+#   # then install torch (cu121) + build the CUDA extensions (see notes at bottom)
+#
+name: c3g
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - ninja            # required to JIT-build the CUDA rasterizers
+  - pip:
+      # ---- PyTorch (CUDA 12.1) — install with the cu121 index ----
+      # pip install torch==2.4.0 torchvision --index-url https://download.pytorch.org/whl/cu121
+      - torch==2.4.0
+      - torchvision
+
+      # ---- Core framework ----
+      - pytorch-lightning>=2.0
+      - hydra-core>=1.3
+      - omegaconf>=2.3
+      - dacite
+      - einops
+      - jaxtyping
+      - beartype
+      - numpy
+      - pillow
+      - opencv-python
+      - tqdm
+      - wandb>=0.19
+
+      # ---- Losses / metrics ----
+      - lpips
+      - scikit-image     # scikit-image SSIM used in eval protocol
+      - scipy
+
+      # ---- DA3 / model I/O ----
+      - timm
+      - transformers
+      - huggingface_hub
+      - safetensors
+
+      # ---- VDiff (basicsr) helpers ----
+      - mmengine
+      - colorama
+      - tabulate
+
+      # ---- Visualization / IO ----
+      - matplotlib
+      - imageio
+      - imageio-ffmpeg
+
+# ---------------------------------------------------------------------------
+# Installed SEPARATELY, from source (NOT via this file) — see REPRODUCE.md §1,§6:
+#
+#   basicsr          → install the VD-Diff fork (Chen-Rao/VD-Diff), NOT stock PyPI,
+#                      so that basicsr.archs.S3_arch is available.
+#   gsplat           → build from ReSplat's dependency; cache the built .so.
+#   diff_gaussian_rasterization_w_pose          → C3G submodule, `pip install -e`
+#   diff_gaussian_rasterization_w_feature_detach → C3G submodule, `pip install -e`
+#   mip-splatting diff-gaussian-rasterization    → only if not lazy-importing the
+#                      MipSplattingRefiner (different kernel_size ABI — do not mix
+#                      with the C3G rasterizers).
+#
+# These four CUDA extensions have incompatible ABIs and must each be built from
+# their own source tree at the pinned commits.
+# ---------------------------------------------------------------------------

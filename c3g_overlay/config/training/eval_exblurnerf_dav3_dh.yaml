@@ -1,0 +1,86 @@
+# @package _global_
+# Eval: DA3-GIANT + ReSplat + DiffusionHead on ExBlur-NeRF benchmark.
+# Run with: python src/main.py +training=eval_exblurnerf_dav3_dh \
+#             checkpointing.load=<ckpt_path> wandb.name=eval_exblur_stepXXXX
+
+defaults:
+  - /dataset@_group_.colmap: exblurnerf
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips]
+
+wandb:
+  name: eval_exblurnerf_dav3_dh
+  tags: [eval, da3_resplat, diffusion_head, exblurnerf, ours]
+
+model:
+  encoder:
+    name: da3_resplat
+    da3_checkpoint: /gpfs/scratch1/shared/qzhang1/da3_pretrained/DA3-GIANT
+    resplat_checkpoint: /gpfs/scratch1/shared/qzhang1/resplat_pretrained/resplat-base-dl3dv-256x448-view8-1934a04c.pth
+    freeze_da3: true
+    freeze_resplat: true
+    gaussian_adapter:
+      sh_degree: 3
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: 1000
+  refiner: null
+  diffusion_head:
+    enc_k: 256
+    enc_df: 128
+    enc_df_out: 128
+    enc_d_point: 64
+    enc_cross_depth: 4
+    enc_self_depth: 2
+    dec_dim_model: 64
+    dec_cross_depth: 3
+    dec_num_virtual: 256
+    train_num_steps: 3
+    infer_num_steps: 3
+    use_cam_cond: true
+    use_vggt_priors: true
+    use_cam_pred: false
+
+dataset:
+  colmap:
+    view_sampler:
+      num_context_views: 10
+      min_context_views: 2
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+
+mode: test
+
+test:
+  output_path: /scratch-shared/qzhang1/eval_outputs
+  align_pose: false
+  compute_scores: true
+  save_image: true
+  save_video: false
+  save_compare: true
+
+train:
+  freeze_encoder: true
+  share_weight: 0.0
+  context_view_loss: false
+
+trainer:
+  devices: 1
+  strategy: single_device
+  enable_progress_bar: true
+  num_nodes: 1
+
+checkpointing:
+  load: null   # override at runtime: checkpointing.load=<path>
+  every_n_train_steps: 999999
+  save_top_k: 0

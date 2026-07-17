@@ -1,0 +1,95 @@
+# @package _global_
+# SOTA Pipeline: Frozen C3G encoder → MipSplattingRefiner → DiffusionHead → C3G decoder
+#
+# Param groups:
+#   Encoder (全部)  → frozen (freeze_encoder=true)
+#   DiffusionHead   → lr = 1e-4  (Nova3R flow-matching，从头训练)
+#   MipSplattingRefiner → 无持久参数，per-scene test-time optimization
+
+defaults:
+  - /dataset@_group_.blur_replica: blur_replica
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips, depth]
+
+wandb:
+  name: blur_replica_sota
+  tags: [blur_replica, diffusion_head, dpt_gs_finetune, sota]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/gaussian_decoder_multiview.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 10.0
+    decrease_lpf_step: 1000
+  # MipSplattingRefiner: disabled during training to avoid multi-node DDP deadlock.
+  # The internal backward() calls inside _refine_single interact with DDP's
+  # AccumulateGrad hooks, causing cross-node rank desync over Ethernet.
+  # Re-enable at inference: set num_opt_steps: 100 in evaluation config.
+  refiner: null
+  # DiffusionHead：Nova3R flow-matching deblurrer（唯一可训练模块）
+  diffusion_head:
+    enc_k: 256
+    enc_df: 128
+    enc_df_out: 128
+    enc_d_point: 64
+    enc_cross_depth: 4
+    enc_self_depth: 2
+    dec_dim_model: 64
+    dec_cross_depth: 3
+    dec_num_virtual: 256
+    train_num_steps: 1    # single Euler step during training (fast + sufficient)
+    infer_num_steps: 10   # multi-step at inference for quality
+    use_cam_cond: true    # inject context camera extrinsics+intrinsics as conditioning
+
+dataset:
+  blur_replica:
+    sharp_context: false   # encoder 输入模糊图，GT 仍为清晰图
+    view_sampler:
+      warm_up_steps: 37500
+      num_context_views: 36
+    samples_per_scene: 200
+
+optimizer:
+  lr: 5e-5
+  warm_up_steps: 2000
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+
+train:
+  context_view_loss: true
+  random_select_context_view: true
+  freeze_encoder: true              # 只训 DiffusionHead，避免跨节点 AllReduce 1B 参数 timeout
+  depth_mode: depth                 # enable depth rendering for depth consistency loss
+  share_weight: 0.1                 # L_share: context-view reconstruction loss weight
+
+trainer:
+  max_steps: 150001
+  val_check_interval: 1000
+  accumulate_grad_batches: 2
+  gradient_clip_val: 1.0
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 1
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 2000
+  save_top_k: -1

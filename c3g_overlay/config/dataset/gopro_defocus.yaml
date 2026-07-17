@@ -1,0 +1,33 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: gopro_defocus
+
+roots:
+  - /scratch-shared/qzhang1/datasets/gopro_defocus/Go_pro_defocus_train
+
+near: 0.1
+far: 100.0
+
+# blur_crops/sharp_crops are 768×768 squares (~6 crops per scene).
+# Resize to 336×336 — multiple of lcm(14,8)=56 (=6×56) so DA3 patch14 +
+# ReSplat stride8 both align cleanly without padding.
+input_image_shape: [336, 336]
+original_image_shape: [336, 336]
+cameras_are_circular: false
+
+baseline_min: 0.0
+baseline_max: 1.0e10
+max_fov: 180.0
+skip_bad_shape: false
+
+# Crop scene ids (sid in <sid>_s<NNN>.png) span the input/ range. Hold out
+# ids >= 502 for val (~50 scenes × 6 crops).
+val_ids_start: 502
+samples_per_scene: 1
+val_samples_per_scene: 1
+
+make_baseline_1: false
+augment: false
+relative_pose: false

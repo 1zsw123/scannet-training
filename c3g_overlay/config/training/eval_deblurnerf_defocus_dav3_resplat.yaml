@@ -1,0 +1,69 @@
+# @package _global_
+# Eval-only: DA3-GIANT + ReSplat encoder (frozen) on deblurnerf_defocus benchmark.
+
+defaults:
+  - /dataset@_group_.colmap: deblurnerf_defocus
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips]
+
+wandb:
+  name: eval_deblurnerf_defocus_dav3_resplat
+  tags: [eval, da3_resplat, deblurnerf_defocus, baseline]
+
+model:
+  encoder:
+    name: da3_resplat
+    da3_checkpoint: /gpfs/scratch1/shared/qzhang1/da3_pretrained/DA3-GIANT
+    resplat_checkpoint: /gpfs/scratch1/shared/qzhang1/resplat_pretrained/resplat-base-dl3dv-256x448-view8-1934a04c.pth
+    freeze_da3: true
+    freeze_resplat: true
+    gaussian_adapter:
+      sh_degree: 3
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: 1000
+  refiner: null
+  diffusion_head: null
+
+dataset:
+  colmap:
+    view_sampler:
+      num_context_views: 10
+      min_context_views: 2
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+
+mode: test
+
+test:
+  output_path: /scratch-shared/qzhang1/eval_outputs
+  align_pose: false
+  compute_scores: true
+  save_image: false
+  save_video: false
+  save_compare: false
+
+train:
+  freeze_encoder: true
+  share_weight: 0.0
+  context_view_loss: false
+
+trainer:
+  devices: 1
+  strategy: single_device
+  enable_progress_bar: true
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 999999
+  save_top_k: 0

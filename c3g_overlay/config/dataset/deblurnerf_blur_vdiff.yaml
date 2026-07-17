@@ -1,0 +1,33 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: colmap
+
+roots:
+  - /scratch-shared/qzhang1/datasets/deblurnerf/real_camera_motion_blur
+
+image_dir: images_4_vdiff
+sharp_dir: images_4
+test_hold: 7
+test_txt: false
+
+near: 0.01
+far: 100.0
+
+num_context_views: 10
+num_target_views: 1
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 120.0
+make_baseline_1: false
+augment: false
+relative_pose: true
+skip_bad_shape: false
+
+cameras_are_circular: false
+input_image_shape: [224, 224]
+original_image_shape: [224, 224]
+
+samples_per_scene: 50

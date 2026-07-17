@@ -1,0 +1,114 @@
+# @package _global_
+# Finetune DA3+ReSplat+DiffusionHead on RSBlur (real motion blur, no GT poses).
+# Loss: L1 + LPIPS-v3 + SSIM.
+# Stage 3: Replica (32k) → ScanNet++ (10k) → RSBlur (20k).
+# Starts from ScanNet++ final checkpoint (load_weights_only=true).
+
+defaults:
+  - /dataset@_group_.rsblur: rsblur
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse_l1, lpips_v3, ssim, depth]
+
+wandb:
+  name: finetune_dav3_rsblur_l1
+  tags: [rsblur, diffusion_head, da3_resplat, finetune, pred_pose, l1, curriculum]
+
+model:
+  encoder:
+    name: da3_resplat
+    da3_checkpoint: /gpfs/scratch1/shared/qzhang1/da3_pretrained/DA3-GIANT
+    resplat_checkpoint: /gpfs/scratch1/shared/qzhang1/resplat_pretrained/resplat-base-dl3dv-256x448-view8-1934a04c.pth
+    freeze_da3: true
+    freeze_resplat: true
+    use_pred_pose: true
+    gaussian_adapter:
+      sh_degree: 3
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: -1
+  refiner: null
+  diffusion_head:
+    enc_k: 256
+    enc_df: 128
+    enc_df_out: 128
+    enc_d_point: 64
+    enc_cross_depth: 4
+    enc_self_depth: 2
+    dec_dim_model: 64
+    dec_cross_depth: 3
+    dec_num_virtual: 256
+    train_num_steps: 3
+    infer_num_steps: 3
+    use_cam_cond: false
+    use_vggt_priors: true
+    use_cam_pred: false
+
+dataset:
+  rsblur:
+    view_sampler:
+      warm_up_steps: 0
+      num_context_views: 16
+      min_context_views: 2
+    samples_per_scene: 200
+    input_image_shape:
+    - 280
+    - 448
+    original_image_shape:
+    - 280
+    - 448
+
+optimizer:
+  lr: 2e-5
+  warm_up_steps: 200
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_workers: 1
+    persistent_workers: false
+    num_val_samples: 200  # CRITICAL: default=1 → DDP rank desync + val=0 bug. Must >= num_ranks AND large enough to average single-sample model collapses.
+
+train:
+  context_view_loss: false
+  random_select_context_view: true
+  freeze_encoder: true
+  depth_mode: depth
+  share_weight: 0.0
+  l_flow_weight: 0.0
+  cam_loss_weight: 0.0
+
+trainer:
+  max_steps: 20000
+  val_check_interval: 500
+  accumulate_grad_batches: 4
+  gradient_clip_val: 1.0
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 0
+  precision: bf16-mixed
+  num_nodes: 1
+
+checkpointing:
+  load: /scratch-shared/qzhang1/C3G_outputs/exp_finetune_dav3_rsblur_l1/2026-04-30_13-22-10/checkpoints/best-psnr-val/psnr_20.069-info/global_step_750.ckpt
+  every_n_train_steps: 501  # not a multiple of val_check_interval (125 global steps), avoids save+val coincidence that corrupted val/psnr at step 500/1000
+  save_top_k: 1
+  save_weights_only: false
+
+# Loss weight overrides for RSBlur (L1 dominant, LPIPS small + delayed, depth small).
+# Note: each loss yaml has its own top-level key — lpips_v3.yaml uses key `lpips`.
+loss:
+  mse_l1:
+    weight: 0.8
+  lpips:
+    weight: 0.05
+    apply_after_step: 2000
+  ssim:
+    weight: 0.2
+  depth:
+    weight: 0.3

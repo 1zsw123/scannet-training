@@ -1,0 +1,10 @@
+defaults:
+  - base_view_sampler
+
+# ScanNet++ iPhone: ~300 frames per scene, ~60fps
+# Use similar range as blur_replica
+min_distance_between_context_views: 15
+max_distance_between_context_views: 60
+min_distance_to_context_views: 0
+initial_min_distance_between_context_views: 20
+initial_max_distance_between_context_views: 50

@@ -1,0 +1,68 @@
+# @package _global_
+# Eval-only: Frozen C3G encoder → C3G decoder (no refiner)
+# Purpose: baseline GS quality on ScanNet++ blur dataset.
+
+defaults:
+  - /dataset@_group_.scannetpp_blur: scannetpp_blur
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips]
+
+wandb:
+  name: eval_c3g_scannetpp
+  tags: [eval, c3g, scannetpp, baseline]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/gaussian_decoder_multiview.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.0
+    decrease_lpf_step: 999999
+  refiner: null
+  diffusion_head: null
+
+dataset:
+  scannetpp_blur:
+    samples_per_scene: 50
+    num_context_views: 6
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_val_samples: 500
+
+train:
+  freeze_encoder: true
+  share_weight: 0.0
+
+trainer:
+  max_steps: 1
+  val_check_interval: 1
+  devices: 1
+  strategy: single_device
+  enable_progress_bar: true
+  num_sanity_val_steps: 1
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 999999
+  save_top_k: 0

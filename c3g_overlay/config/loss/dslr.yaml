@@ -1,0 +1,5 @@
+dslr:
+  weight: 1.0
+  lpips_weight: 0.0          # lpips handled separately
+  exp_comp_blur_sigma: 0.05  # blur kernel = 5% of image size
+  exp_comp_min_valid: 0.1    # skip exp-comp if <10% valid pixels

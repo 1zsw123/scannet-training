@@ -1,0 +1,42 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: scannet_i2slam
+
+roots:
+  - /scratch-shared/qzhang1/datasets/i2slam_scannet/I2-SLAM_dataset/rgbd/scannet
+
+near: 0.1
+far: 10.0
+
+# i2slam color is 640x480 (W=640, H=480). DA3 caps internally at 448x336;
+# ReSplat needs % 16. 336x448 ([H, W]) is safe for both, divisible by 14.
+input_image_shape: [336, 448]
+original_image_shape: [480, 640]
+cameras_are_circular: false
+
+baseline_min: 0.0
+baseline_max: 1.0e10
+max_fov: 180.0
+skip_bad_shape: true
+
+# Native color sensor resolution (intrinsic_color.txt is at this resolution)
+native_color_w: 1296
+native_color_h: 968
+
+# Scene split: 3 train, 1 val
+train_scenes: [scene0024_01, scene0031_00, scene0736_00]
+val_scenes:   [scene0785_00]
+
+# Sampling: 6-frame consecutive bundles, 100 samples per train scene per epoch
+samples_per_scene: 100
+val_samples_per_scene: 8
+num_context_views: 6
+frame_stride: 1
+
+# Match Replica training: false. Absolute-metre GT poses go straight to encoder;
+# encoder._normalise_poses median-clamp(0.1) is the common normaliser.
+make_baseline_1: false
+augment: false
+relative_pose: false

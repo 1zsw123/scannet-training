@@ -1,0 +1,15 @@
+# @package _global_
+# Variant of gaussian_head_blur_replica_sota_dav3_resplat with the bounded
+# view_sampler swapped for the deterministic sequential one (12-frame chunks
+# in trajectory order, full 500-frame coverage per scene).
+defaults:
+  - gaussian_head_blur_replica_sota_dav3_resplat
+  - override /dataset/view_sampler@dataset.blur_replica.view_sampler: sequential
+  - _self_
+
+dataset:
+  blur_replica:
+    samples_per_scene: 42   # ceil(500/12) — covers all frames once per scene
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 12

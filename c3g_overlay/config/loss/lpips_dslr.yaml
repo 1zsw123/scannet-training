@@ -1,0 +1,4 @@
+lpips_dslr:
+  weight: 0.025
+  apply_after_step: 0
+  exp_comp_blur_sigma: 0.05

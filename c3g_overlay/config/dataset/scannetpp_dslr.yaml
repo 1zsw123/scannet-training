@@ -1,0 +1,35 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+  - optional view_sampler_dataset_specific_config@view_sampler: bounded_scannetpp_blur
+
+name: scannetpp_dslr
+
+roots:
+  - /gpfs/scratch1/shared/qzhang1/scannetpp_processed
+
+near: 0.01
+far: 10.0
+
+input_image_shape: [224, 224]       # context (iPhone) → VGGT encoder
+original_image_shape: [480, 640]    # target (DSLR) h/w read from poses_dslr_sharp.json (720×480)
+background_color: [0.0, 0.0, 0.0]
+cameras_are_circular: false
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 120.0
+skip_bad_shape: false
+
+scene_list: []   # empty = auto-discover all scenes with >=min_dslr_pairs
+
+samples_per_scene: 100
+num_context_views: 16
+num_target_views: 4
+min_dslr_pairs: 20
+
+make_baseline_1: false
+augment: false
+relative_pose: true
+
+val_samples_file: ""   # set in eval config to use fixed 200-sample val set

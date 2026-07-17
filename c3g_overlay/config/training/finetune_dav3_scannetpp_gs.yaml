@@ -1,0 +1,86 @@
+# @package _global_
+# Fine-tune DAV3 (DA3+ReSplat+DiffusionHead) on ScanNet++ GS-rendered sharp GT.
+# Encoder (DA3+ReSplat) frozen; only DiffusionHead trains.
+# Load from SOTA Replica checkpoint via checkpointing.load.
+
+defaults:
+  - /dataset@_group_.scannetpp_gs: scannetpp_gs
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips, ssim, depth, laplacian]
+
+wandb:
+  name: finetune_dav3_scannetpp_gs
+  tags: [finetune, dav3, scannetpp, gs, deblur]
+
+model:
+  encoder:
+    name: da3_resplat
+    da3_checkpoint: /gpfs/scratch1/shared/qzhang1/da3_pretrained/DA3-GIANT
+    resplat_checkpoint: /gpfs/scratch1/shared/qzhang1/resplat_pretrained/resplat-base-dl3dv-256x448-view8-1934a04c.pth
+    freeze_da3: true
+    freeze_resplat: true
+    gaussian_adapter:
+      sh_degree: 3
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 10.0
+    decrease_lpf_step: 1000
+  refiner: null
+  diffusion_head:
+    enc_k: 256
+    enc_df: 128
+    enc_df_out: 128
+    enc_d_point: 64
+    enc_cross_depth: 4
+    enc_self_depth: 2
+    dec_dim_model: 64
+    dec_cross_depth: 3
+    dec_num_virtual: 256
+    train_num_steps: 3
+    infer_num_steps: 3
+    use_cam_cond: true
+    use_vggt_priors: true
+    use_cam_pred: false
+
+dataset:
+  scannetpp_gs:
+    samples_per_scene: 100
+    num_context_views: 6
+
+optimizer:
+  lr: 2e-5
+  warm_up_steps: 200
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_val_samples: 200
+
+train:
+  context_view_loss: false
+  random_select_context_view: true
+  freeze_encoder: true
+  depth_mode: depth
+  share_weight: 0.0
+  l_flow_weight: 0.0
+  cam_loss_weight: 0.0
+
+trainer:
+  max_steps: 20000
+  val_check_interval: 500
+  accumulate_grad_batches: 4
+  gradient_clip_val: 1.0
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 1
+  num_nodes: 1
+
+checkpointing:
+  load: null   # set to SOTA checkpoint path before launching
+  every_n_train_steps: 500
+  save_top_k: -1

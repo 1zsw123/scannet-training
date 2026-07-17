@@ -1,0 +1,65 @@
+# @package _global_
+
+defaults:
+  - /dataset@_group_.blur_replica: blur_replica
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips]
+
+wandb:
+  name: baseline_sharp2sharp_multiview
+  tags: [blur_replica, baseline, multiview]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G/pretrained_weights/model.pt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 10.0
+    decrease_lpf_step: 1000
+
+dataset:
+  blur_replica:
+    view_sampler:
+      warm_up_steps: 37500
+      num_context_views: 24
+    samples_per_scene: 200
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1000
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+
+train:
+  context_view_loss: true
+  random_select_context_view: true
+
+trainer:
+  max_steps: 150001
+  val_check_interval: 1000
+  accumulate_grad_batches: 2
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 0
+  num_nodes: 2
+
+checkpointing:
+  every_n_train_steps: 5000
+  save_top_k: 5

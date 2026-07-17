@@ -1,0 +1,73 @@
+# @package _global_
+# DEPRECATED — superseded by finetune_dav3_scannetpp_gs.yaml (DA3+ReSplat+DiffHead)
+# Fine-tune C3G (VGGT encoder) on ScanNet++ GS-rendered sharp GT.
+# Loss: masked L1 (sharp regions weighted higher) + LPIPS + depth
+# Dataset: scannetpp_gs (GS RGB+depth+Laplacian mask at iPhone poses)
+
+defaults:
+  - /dataset@_group_.scannetpp_gs: scannetpp_gs
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips, depth]
+
+wandb:
+  name: finetune_c3g_scannetpp_gs
+  tags: [finetune, c3g, scannetpp, gs, deblur]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/gaussian_decoder_multiview.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 5.0
+    decrease_lpf_step: 2000
+  refiner: null
+  diffusion_head: null
+
+dataset:
+  scannetpp_gs:
+    samples_per_scene: 100
+    num_context_views: 6
+
+optimizer:
+  lr: 5e-5
+  warm_up_steps: 500
+  backbone_lr_multiplier: 0.1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_val_samples: 200
+
+train:
+  freeze_encoder: false
+  share_weight: 0.0
+  context_view_loss: false
+
+trainer:
+  max_steps: 50000
+  val_check_interval: 1000
+  accumulate_grad_batches: 4
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 2
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 5000
+  save_top_k: 5

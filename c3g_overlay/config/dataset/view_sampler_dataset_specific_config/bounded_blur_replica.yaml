@@ -1,0 +1,12 @@
+defaults:
+  - base_view_sampler
+
+# 完全对齐 RE10K 的设计
+# Replica blur_36 约 499 帧，RE10K 约 200~300 帧，距离可以稍大
+min_distance_between_context_views: 45
+max_distance_between_context_views: 90
+min_distance_to_context_views: 0
+# num_context_views=36 needs 34 extra views between left/right → context_gap must be > 35
+# With 499 frames, use 40~90 as initial range (safe for 34 extra views)
+initial_min_distance_between_context_views: 40
+initial_max_distance_between_context_views: 80

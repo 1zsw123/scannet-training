@@ -1,0 +1,89 @@
+# @package _global_
+# Eval-only: Frozen C3G encoder → MipSplatting TTO (100 Adam steps) → C3G decoder
+# Purpose: measure MipSplatting TTO effect on Replica blur dataset.
+
+defaults:
+  - /dataset@_group_.blur_replica: blur_replica
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips]
+
+wandb:
+  name: eval_c3g_mip
+  tags: [eval, c3g, mip_splatting, tto, replica]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/gaussian_decoder_multiview.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.0
+    decrease_lpf_step: 999999
+  refiner:
+    num_opt_steps: 1500
+    lr_xyz: 1.6e-4
+    lr_scale: 5e-3
+    lr_rotation: 1e-3
+    lr_color: 2.5e-3
+    lr_opacity: 5e-2
+    make_scale_invariant: true
+    filter_boost: 8.0
+    background_color: [0.0, 0.0, 0.0]
+    densify_from_iter: 500
+    densify_until_iter: 15000
+    densification_interval: 100
+    densify_grad_threshold: 0.00005
+    opacity_reset_interval: 3000
+    min_opacity: 0.005
+    percent_dense: 0.01
+    max_screen_size: 20
+    max_gaussians: 24000
+  diffusion_head: null
+
+dataset:
+  blur_replica:
+    view_sampler:
+      num_context_views: 6
+    samples_per_scene: 50
+    sharp_context: false
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_val_samples: 250
+
+train:
+  freeze_encoder: true
+  share_weight: 0.0
+  use_vggt_poses_for_refiner: true
+
+trainer:
+  max_steps: 1
+  val_check_interval: 1
+  devices: 1
+  strategy: auto
+  enable_progress_bar: true
+  num_sanity_val_steps: 0
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 999999
+  save_top_k: 0

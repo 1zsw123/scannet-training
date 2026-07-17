@@ -1,0 +1,75 @@
+# @package _global_
+# Eval: VGGT encoder only (no ReSplat, no DiffusionHead) on deblurnerf_blur benchmark.
+
+defaults:
+  - /dataset@_group_.colmap: deblurnerf_blur
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips]
+
+wandb:
+  name: eval_deblurnerf_blur_vggt
+  tags: [eval, vggt, deblurnerf_blur, baseline]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/gaussian_decoder_multiview.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 10.0
+    decrease_lpf_step: 1000
+  refiner: null
+  diffusion_head: null
+
+dataset:
+  colmap:
+    view_sampler:
+      num_context_views: 10
+      min_context_views: 2
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+
+mode: test
+
+test:
+  output_path: /scratch-shared/qzhang1/eval_outputs
+  align_pose: false
+  compute_scores: true
+  save_image: false
+  save_video: false
+  save_compare: false
+
+train:
+  freeze_encoder: true
+  share_weight: 0.0
+  context_view_loss: false
+
+trainer:
+  devices: 1
+  strategy: single_device
+  enable_progress_bar: true
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 999999
+  save_top_k: 0

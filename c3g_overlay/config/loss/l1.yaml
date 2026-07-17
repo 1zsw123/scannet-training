@@ -1,0 +1,3 @@
+masked_l1:
+  weight: 0.5
+  fallback_weight: 1.0   # no mask in RSBlur → plain L1

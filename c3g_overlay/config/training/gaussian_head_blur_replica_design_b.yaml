@@ -1,0 +1,110 @@
+# @package _global_
+# Design B: Camera as condition only (VGGT camera_token + patch_token priors injected)
+# DiffusionHead outputs Sharp Gaussians only; no camera prediction.
+# Compare vs Design A to measure value of explicit camera supervision.
+
+defaults:
+  - /dataset@_group_.blur_replica: blur_replica
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [mse, lpips, ssim, depth]
+
+wandb:
+  name: design_b_cam_cond_only
+  tags: [blur_replica, design_b, vggt_priors, cam_cond]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/gaussian_decoder_multiview.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 10.0
+    decrease_lpf_step: 1000
+  refiner:
+    num_opt_steps: 1500
+    lr_xyz: 1.6e-4
+    lr_scale: 5e-3
+    lr_rotation: 1e-3
+    lr_color: 2.5e-3
+    lr_opacity: 5e-2
+    make_scale_invariant: true
+    filter_boost: 1.0
+    background_color: [0.0, 0.0, 0.0]
+    densify_from_iter: 500
+    densify_until_iter: 15000
+    densification_interval: 100
+    densify_grad_threshold: 0.00005
+    opacity_reset_interval: 999999
+    min_opacity: 0.005
+    percent_dense: 0.01
+    max_screen_size: 20
+    max_gaussians: 24000
+  diffusion_head:
+    enc_k: 256
+    enc_df: 128
+    enc_df_out: 128
+    enc_d_point: 64
+    enc_cross_depth: 4
+    enc_self_depth: 2
+    dec_dim_model: 64
+    dec_cross_depth: 3
+    dec_num_virtual: 256
+    train_num_steps: 3
+    infer_num_steps: 3
+    use_cam_cond: true       # GT pose_enc (ProPE 9-dim) as condition
+    use_vggt_priors: true    # VGGT camera/patch tokens as extra condition
+    use_cam_pred: false      # Design B: no camera output/supervision
+
+dataset:
+  blur_replica:
+    sharp_context: false
+    view_sampler:
+      warm_up_steps: 0
+      num_context_views: 36
+      min_context_views: 2
+    samples_per_scene: 200
+
+optimizer:
+  lr: 5e-5
+  warm_up_steps: 0
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 4
+
+train:
+  context_view_loss: true
+  random_select_context_view: true
+  freeze_encoder: true
+  depth_mode: depth
+  share_weight: 0.0
+  l_flow_weight: 0.0
+  cam_loss_weight: 0.0
+
+trainer:
+  max_steps: 37500
+  val_check_interval: 250
+  accumulate_grad_batches: 1
+  gradient_clip_val: 1.0
+  devices: 4
+  strategy: ddp
+  enable_progress_bar: true
+  num_sanity_val_steps: 1
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 500
+  save_top_k: -1

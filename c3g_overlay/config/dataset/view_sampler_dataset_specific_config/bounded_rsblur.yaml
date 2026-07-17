@@ -1,0 +1,11 @@
+defaults:
+  - base_view_sampler
+
+# RSBlur "scenes" are split into burst sub-scenes (median 20 frames, range 3-100).
+# Sampling now stays within a single burst (true same physical scene).
+# Reduced max_distance to fit median burst; min=2 to allow tiny bursts.
+min_distance_between_context_views: 5
+max_distance_between_context_views: 30
+min_distance_to_context_views: 0
+initial_min_distance_between_context_views: 5
+initial_max_distance_between_context_views: 20

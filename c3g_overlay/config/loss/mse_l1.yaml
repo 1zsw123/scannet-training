@@ -1,0 +1,3 @@
+mse_l1:
+  weight: 0.5
+  empty_render_thresh: 0.02

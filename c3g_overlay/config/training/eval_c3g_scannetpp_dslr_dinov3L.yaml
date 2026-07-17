@@ -1,0 +1,72 @@
+# @package _global_
+# Eval-only: C3G with feature_decoder_dinov3L on ScanNet++ iPhone→DSLR dataset.
+# Context: 16 blurry iPhone frames. Target: 4 sharp DSLR frames.
+# Metrics: PSNR / SSIM / LPIPS of rendered DSLR view vs real DSLR GT.
+
+defaults:
+  - /dataset@_group_.scannetpp_dslr: scannetpp_dslr
+  - override /model/encoder: noposplat
+  - override /model/encoder/backbone: croco
+  - override /loss: [dslr, lpips]
+
+wandb:
+  name: eval_c3g_scannetpp_dslr_dinov3L
+  tags: [eval, c3g, scannetpp, dslr, deblur, dinov3L]
+
+model:
+  encoder:
+    backbone:
+      name: vggt_multi
+    gaussian_adapter:
+      sh_degree: 0
+      clamping: -1
+    name: vggt
+    num_gaussians: 2048
+    gs_params_head_type: dpt_gs
+    pose_free: true
+    intrinsics_embed_loc: None
+    intrinsics_embed_type: None
+    pretrained_weights: '/scratch-shared/qzhang1/C3G_pretrained/feature_decoder_dinov3L.ckpt'
+    init_points: one_point
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.0
+    decrease_lpf_step: 999999
+  refiner: null
+  diffusion_head: null
+
+dataset:
+  scannetpp_dslr:
+    samples_per_scene: 10
+    num_context_views: 24
+    num_target_views: 4
+    val_samples_file: /gpfs/scratch1/shared/qzhang1/scannetpp_processed/val_samples_scannetpp_dslr.json
+
+optimizer:
+  lr: 1e-4
+  warm_up_steps: 1
+
+data_loader:
+  train:
+    batch_size: 1
+  val:
+    batch_size: 1
+    num_val_samples: 200
+
+train:
+  freeze_encoder: true
+  share_weight: 0.0
+  context_view_loss: false
+
+trainer:
+  max_steps: 1
+  val_check_interval: 1
+  devices: 1
+  strategy: single_device
+  enable_progress_bar: true
+  num_sanity_val_steps: 0
+  num_nodes: 1
+
+checkpointing:
+  every_n_train_steps: 999999
+  save_top_k: 0

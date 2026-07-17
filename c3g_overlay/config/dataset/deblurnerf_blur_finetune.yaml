@@ -1,0 +1,44 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: deblurnerf_blur_finetune
+
+roots:
+  - /scratch-shared/qzhang1/datasets/deblurnerf/real_camera_motion_blur
+
+# Sharp pseudo-GT (per-scene subdir, 1-to-1 with images_4 train cams)
+# Use the per-scene best-iter rendered ones (slightly higher fidelity than 25k for
+# scenes that peaked earlier).
+pseudo_gt_root:    /scratch-shared/qzhang1/scannetpp_processed/deblurnerf_pseudogt_evssm_como25k_bestiter
+pseudo_depth_root: /scratch-shared/qzhang1/scannetpp_processed/deblurnerf_pseudodepth_como25k
+
+near: 0.01
+far: 100.0
+
+# images_4 are 600x400. Match scannet_i2slam input shape (336x448, multiples of 14
+# for DA3 ViT-G and 16 for ReSplat).
+input_image_shape: [336, 448]
+original_image_shape: [400, 600]
+cameras_are_circular: false
+
+baseline_min: 0.0
+baseline_max: 1.0e10
+max_fov: 180.0
+skip_bad_shape: true
+make_baseline_1: true
+augment: false
+relative_pose: false
+
+# Scene split — 8 train, 2 val (val picks well-converged pseudo-GT)
+train_scenes: [blurball, blurbasket, blurbuick, blurdecoration, blurgirl, blurheron, blurparterre, blurstair]
+val_scenes:   [blurcoffee, blurpuppet]
+
+# DeblurNeRF llff hold convention: every 7th frame is test → exclude from train
+test_hold: 7
+
+# Sampling: 6-frame consecutive bundles, 100 train samples per scene per epoch
+samples_per_scene: 100
+val_samples_per_scene: 8
+num_context_views: 6
+frame_stride: 1
